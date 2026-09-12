@@ -487,7 +487,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
     // 管家
     var perfByName={};
-    ORDER.forEach(function(r){ if(!inRange(r.date)||r.type==="退款"||!r.consultant) return; var add=Math.round(r.cash*100)/100; perfByName[r.consultant]=Math.round(((perfByName[r.consultant]||0)+add)*100)/100; });
+    ORDER.forEach(function(r){ if(!inRange(r.date)||r.type==="退款"||!r.consultant) return; var add=Math.round(r.cash*100)/100; var key=(String(r.deptSrc||"").indexOf("营销部")>=0)?"无":r.consultant; perfByName[key]=Math.round(((perfByName[key]||0)+add)*100)/100; });
     var bBook={},bVisit={};
     APPT.forEach(function(r){
       if(!inRange(r.date)||!r.mem) return; if(!r.butler) return;
@@ -856,7 +856,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   // ---------- 流程 ----------
   function rangeText(){
-    if(RANGE.start&&RANGE.end) return fmtMD(RANGE.start)+"~"+fmtMD(RANGE.end);
+    if(RANGE.start&&RANGE.end) return fmtMD(RANGE.start)+"~"+fmtMD(RANGE.end)+" 12:00";
     return "";
   }
   function autoRange(){
