@@ -81,10 +81,10 @@ table.tbl tr.total td{background:var(--navy);color:#fff;font-weight:700;font-siz
 table.tbl tr.note td{background:#fff;color:var(--ink);text-align:left;font-size:12px;line-height:1.6;white-space:pre-line}
 table.tbl tr.summary td{background:var(--light-blue);color:var(--ink);font-weight:600;font-size:12.5px;text-align:center}
 .pct{font-weight:700;color:var(--navy)}
-/* 可编辑单元格（高新/经开/总业绩）：外观与普通单元格完全一致，仅保留可输入光标 */
-table.tbl td.editable{background:#fff;color:var(--ink);font-weight:400;cursor:text}
-table.tbl td.editable:hover{background:#fff}
-table.tbl td.editable:focus{background:#fff;color:var(--ink);outline:none;box-shadow:none}
+/* 可编辑单元格（高新/经开/总业绩）：藏蓝浅底+藏蓝描边，明显区别于普通单元格，提示可点击修改 */
+table.tbl td.editable{background:#eef3fb;color:var(--navy);font-weight:700;cursor:text;border:1px dashed var(--navy)}
+table.tbl td.editable:hover{background:#e2ebf8}
+table.tbl td.editable:focus{background:#fff;color:var(--navy);outline:2px solid var(--navy);box-shadow:none}
 
 /* ===== 底部口径说明 ===== */
 .footnote{padding:14px 18px;background:#fff;border:1px solid var(--navy-100);border-radius:12px;
@@ -131,6 +131,7 @@ table.tbl td.editable:focus{background:#fff;color:var(--ink);outline:none;box-sh
   .app-header,.panel,.footnote{display:none!important}
   .report-card{box-shadow:none;border:none;break-inside:avoid}
 }
+
 </style>
 </head>
 <body data-page-node-id="HoslXtImGRKvVmfn0q2v4Y">
@@ -207,7 +208,7 @@ table.tbl td.editable:focus{background:#fff;color:var(--ink);outline:none;box-sh
     <b data-page-node-id="fpaBeqMXw6EIT3G4dXMmW8">口径说明：</b>周客量初诊/复诊取自《预约列表》"是否到访=是"并按"客户来源/预约类型"归类；有成交客量取自《订单项目收退款明细》"现款支付≠0"的去重会员号。
     周业绩"高新"=收款员工为南媛/系统管理员，"经开"=其余；业绩取"收款金额-现款支付"按日汇总。
     管家业绩按"开单咨询师"汇总，"无"行=未分配给具名管家的剩余会员。到访率=总到访/总预约。
-    <br><b>手动调整：</b>周业绩的「高新」「经开」、管家业绩的「总业绩」单元格可直接点击修改（黄色底），修改后排名、合计、最高/最低/平均会自动联动；周业绩「总业绩」=高新+经开 自动求和。手动调整按数据区间自动保存，刷新或重新导入同区间数据后仍在；点「清除手工调整」可清空。
+    <br><b>手动调整：</b>周业绩的「高新」「经开」、管家业绩的「总业绩」单元格可直接点击修改（藏蓝底+虚线框），修改后排名、合计、最高/最低/平均会自动联动；周业绩「总业绩」=高新+经开 自动求和。手动调整按数据区间自动保存，刷新或重新导入同区间数据后仍在；点「清除手工调整」可清空。
   </div>
 
 </div>
@@ -471,9 +472,15 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     perfRows.forEach(function(r){ if(r.total>maxV){maxV=r.total;maxDay=r.date;} if(r.total<minV){minV=r.total;minDay=r.date;} });
     var avg = perfRows.length ? pSum.total/perfRows.length : 0;
 
-    // 管家
+    // 管家：与周业绩同口径（含退款、含无咨询师订单，均归入"无"），合计才能与每日业绩合计一致
     var perfByName={};
-    ORDER.forEach(function(r){ if(!inRange(r.date)||r.type==="退款"||!r.consultant) return; var add=Math.round(r.cash*100)/100; var key=(String(r.deptSrc||"").indexOf("营销部")>=0)?"无":r.consultant; perfByName[key]=Math.round(((perfByName[key]||0)+add)*100)/100; });
+    ORDER.forEach(function(r){
+      if(!inRange(r.date)) return;
+      var add=Math.round(r.cash*100)/100;
+      var c=r.consultant||"";
+      var key=(String(r.deptSrc||"").indexOf("营销部")>=0 || c==="王勤红" || c==="")?"无":c;
+      perfByName[key]=Math.round(((perfByName[key]||0)+add)*100)/100;
+    });
     var bBook={},bVisit={};
     APPT.forEach(function(r){
       if(!inRange(r.date)||!r.mem) return; if(!r.butler) return;
