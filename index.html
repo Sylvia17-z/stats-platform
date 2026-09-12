@@ -513,7 +513,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if(!inRange(r.date)) return;
       var add=Math.round(r.cash*100)/100;
       var c=r.consultant||"";
-      var key=(String(r.deptSrc||"").indexOf("营销部")>=0 || c==="王勤红" || c==="")?"无":c;
+      var key=(String(r.deptSrc||"").indexOf("营销部")>=0 || c==="王勤红" || c==="营销部" || c==="")?"无":c;
       perfByName[key]=Math.round(((perfByName[key]||0)+add)*100)/100;
     });
     var bBook={},bVisit={};
