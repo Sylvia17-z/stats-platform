@@ -161,6 +161,7 @@ table.tbl td.editable:focus{background:#fff;color:var(--ink);outline:none;box-sh
         <input type="date" id="dateEnd" data-page-node-id="DHGBIePVZStP2ejU2VoPuM" />
       </div>
       <button class="btn btn-ghost" id="btnCalc" data-page-node-id="RAVupU9IUItCDYlj9fVQWP">应用区间 / 重新计算</button>
+      <button class="btn btn-ghost" id="btnClearOV" disabled data-page-node-id="btnClearOVNode">清除手工调整</button>
       <button class="btn btn-primary" id="btnPng" disabled data-page-node-id="yxDj0TPzWdzx8D6KQnJspY">🖼 导出图片 (PNG)</button>
       <button class="btn btn-ghost" id="btnXlsx" disabled data-page-node-id="PBuLqDyJEq61prahZCdP7x">📊 导出 Excel</button>
     </div>
@@ -206,7 +207,7 @@ table.tbl td.editable:focus{background:#fff;color:var(--ink);outline:none;box-sh
     <b data-page-node-id="fpaBeqMXw6EIT3G4dXMmW8">口径说明：</b>周客量初诊/复诊取自《预约列表》"是否到访=是"并按"客户来源/预约类型"归类；有成交客量取自《订单项目收退款明细》"现款支付≠0"的去重会员号。
     周业绩"高新"=收款员工为南媛/系统管理员，"经开"=其余；业绩取"收款金额-现款支付"按日汇总。
     管家业绩按"开单咨询师"汇总，"无"行=未分配给具名管家的剩余会员。到访率=总到访/总预约。
-    <br><b>手动调整：</b>周业绩的「高新」「经开」、管家业绩的「总业绩」单元格可直接点击修改（黄色底），修改后排名、合计、最高/最低/平均会自动联动；周业绩「总业绩」=高新+经开 自动求和。重新导入文件会清空手动调整。
+    <br><b>手动调整：</b>周业绩的「高新」「经开」、管家业绩的「总业绩」单元格可直接点击修改（黄色底），修改后排名、合计、最高/最低/平均会自动联动；周业绩「总业绩」=高新+经开 自动求和。手动调整按数据区间自动保存，刷新或重新导入同区间数据后仍在；点「清除手工调整」可清空。
   </div>
 
 </div>
@@ -275,6 +276,26 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   var ORDER = [];  // {date,mem,consultant,deptSrc,cash,employee}
   var RANGE = {start:null, end:null};
   var OV = { perf:{}, butler:{} };   // 手动调整覆盖：perf[日期]={gao,jing}；butler[姓名]={perf}
+
+  // 手工调整持久化：按数据区间 key 存入 localStorage，刷新/重新导入同区间数据后仍在
+  function ovPeriod(){ return (RANGE.start && RANGE.end) ? (RANGE.start + "~" + RANGE.end) : ""; }
+  function saveOV(){
+    try { localStorage.setItem("stats_ov", JSON.stringify({ period: ovPeriod(), ov: OV })); } catch(e){}
+  }
+  function restoreOV(){
+    try {
+      var raw = localStorage.getItem("stats_ov");
+      if(!raw){ OV = { perf:{}, butler:{} }; return; }
+      var obj = JSON.parse(raw);
+      if(obj && obj.period === ovPeriod() && obj.ov){ OV = obj.ov; }
+      else { OV = { perf:{}, butler:{} }; }
+    } catch(e){ OV = { perf:{}, butler:{} }; }
+  }
+  function clearOV(){
+    OV = { perf:{}, butler:{} };
+    try { localStorage.removeItem("stats_ov"); } catch(e){}
+    recompute();
+  }
   var HI = ['南媛','系统管理员'];
 
   // ---------- 工具 ----------
@@ -597,7 +618,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       var nn=c.getAttribute("data-name");
       OV.butler[nn]=OV.butler[nn]||{}; OV.butler[nn].perf=num;
     }
-    refreshDerived();
+    refreshDerived(); saveOV();
   }
   function onEditBlur(e){
     var c=e.target; if(!c.getAttribute || !c.getAttribute("data-field")) return;
@@ -841,7 +862,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     try{
       var R=effectiveR();
       render(R, rangeText());
-      btnPng.disabled=false; btnXlsx.disabled=false;
+      btnPng.disabled=false; btnXlsx.disabled=false; btnClearOV.disabled=false;
       var kv=R.kv;
       status.innerHTML='已导入 <b>预约列表 '+APPT.length+' 行</b> / <b>订单明细 '+ORDER.length+' 行</b> · 数据区间 <b>'+rangeText()+'</b> · '+
         '周客量合计到访 <b>'+kv["合计"].tot+'</b> 人，成交率 <b>'+pctStr(kv["合计"].rate)+'</b>；周业绩合计 <b>'+money(R.perf.sum.total)+'</b> 元。';
@@ -857,6 +878,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   var btnCalc=document.getElementById("btnCalc");
   var btnPng=document.getElementById("btnPng");
   var btnXlsx=document.getElementById("btnXlsx");
+  var btnClearOV=document.getElementById("btnClearOV");
   var status=document.getElementById("status");
 
   // 依据内容自动识别：订单明细含「开单咨询师/现款支付」，预约列表含「是否到访」
@@ -876,7 +898,6 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   fileBoth.addEventListener("change",function(e){
     var files=[].slice.call(e.target.files||[]);
     if(!files.length) return;
-    OV.perf={}; OV.butler={};   // 重新导入清空之前的手工调整
     status.innerHTML='正在解析 <b>'+files.length+'</b> 个文件…';
     Promise.all(files.map(function(f){
       return readAsArrayBuffer(f).then(function(buf){
@@ -889,7 +910,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         return '<span class="warn">读取失败：'+f.name+' '+(err.message||err)+'</span>';
       });
     })).then(function(msgs){
-      if(APPT.length && ORDER.length){ autoRange(); recompute(); }
+      if(APPT.length && ORDER.length){ autoRange(); restoreOV(); recompute(); }
       else { status.innerHTML=msgs.join(' ； '); }
     });
   });
@@ -898,6 +919,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   });
   btnPng.addEventListener("click",exportPng);
   btnXlsx.addEventListener("click",exportExcel);
+  btnClearOV.addEventListener("click",clearOV);
 
   // 业绩单元格手动编辑：input 时实时联动重算，blur 时把编辑框重新格式化为金额
   var reportsEl=document.getElementById("reports");
