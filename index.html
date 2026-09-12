@@ -507,13 +507,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     perfRows.forEach(function(r){ if(r.total>maxV){maxV=r.total;maxDay=r.date;} if(r.total<minV){minV=r.total;minDay=r.date;} });
     var avg = perfRows.length ? pSum.total/perfRows.length : 0;
 
-    // 管家：与周业绩同口径（含退款、含无咨询师订单，均归入"无"），合计才能与每日业绩合计一致
+    // 管家：纯按"开单咨询师"分组；仅王勤红/空咨询师归入"无"
     var perfByName={};
     ORDER.forEach(function(r){
       if(!inRange(r.date)) return;
       var add=Math.round(r.cash*100)/100;
       var c=r.consultant||"";
-      var key=(String(r.deptSrc||"").indexOf("营销部")>=0 || c==="王勤红" || c==="营销部" || c==="")?"无":c;
+      var key=(c==="王勤红" || c==="")?"无":c;
       perfByName[key]=Math.round(((perfByName[key]||0)+add)*100)/100;
     });
     var bBook={},bVisit={};
